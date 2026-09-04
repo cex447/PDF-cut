@@ -1,4 +1,4 @@
-# Extractor PDF
+# Extractor PDF — versión privada
 
 Aplicación web estática para extraer un intervalo de páginas de un PDF.
 
@@ -13,26 +13,33 @@ Ejemplo: `Desde 9` y `Hasta 21` genera un nuevo documento con las páginas 9–2
 
 ## Privacidad
 
-El archivo PDF se lee y procesa dentro del navegador. No se envía a GitHub ni a un servidor propio.
+El PDF se lee y procesa dentro del navegador. No se sube a GitHub ni a ningún servidor.
 
-La aplicación carga `pdf-lib` 1.17.1 desde jsDelivr, con un segundo origen de respaldo en unpkg. Esa descarga contiene únicamente el motor JavaScript: el PDF seleccionado por el usuario no se transmite al CDN.
+Esta versión elimina los CDN **durante el uso**. `pdf-lib` 1.17.1 se incorpora al artefacto publicado como `vendor/pdf-lib.min.js` durante la construcción de GitHub Pages y, desde ese momento, se sirve desde el mismo origen que la aplicación. El flujo verifica además la huella SHA-512 de la librería antes de publicar.
+
+Además, `index.html` incluye una Content Security Policy con `connect-src 'none'`, por lo que la propia página bloquea `fetch`, XMLHttpRequest, WebSocket y conexiones similares.
+
+Consulta `PRIVACIDAD.md` para los detalles técnicos.
 
 ## Publicar con GitHub Pages
 
-1. Crea un repositorio nuevo en GitHub.
-2. Sube el contenido de esta carpeta a la raíz del repositorio.
-3. En **Settings → Pages**, selecciona **Deploy from a branch**.
-4. Selecciona la rama `main` y la carpeta `/ (root)`.
-5. Guarda los cambios.
+1. Crea un repositorio nuevo en GitHub y sube todo el contenido de esta carpeta.
+2. Asegúrate de que la rama principal se llame `main`.
+3. En **Settings → Pages → Build and deployment → Source**, selecciona **GitHub Actions**.
+4. Haz un `push` a `main` o ejecuta manualmente el flujo **Publicar Extractor PDF**.
+5. GitHub construirá el sitio, incorporará `pdf-lib` al propio artefacto, comprobará su integridad y publicará la página.
 
-No requiere servidor, base de datos ni proceso de compilación.
+El PDF del usuario nunca interviene en este proceso de construcción.
 
 ## Archivos
 
-- `index.html` — interfaz.
-- `styles.css` — diseño responsive, modo claro/oscuro.
-- `app.js` — lectura, validación y extracción del PDF.
-- `.nojekyll` — evita el procesamiento Jekyll de GitHub Pages.
+- `index.html` — interfaz y política CSP.
+- `styles.css` — diseño responsive y modo claro/oscuro.
+- `app.js` — lectura, validación y extracción local del PDF.
+- `vendor/` — ubicación del motor PDF local en la web publicada y licencia de `pdf-lib`.
+- `.github/workflows/pages.yml` — construcción y publicación segura en GitHub Pages.
+- `PRIVACIDAD.md` — explicación técnica del tratamiento de datos.
+- `.nojekyll` — evita el procesamiento Jekyll.
 
 ## Compatibilidad
 

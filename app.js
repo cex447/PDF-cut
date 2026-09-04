@@ -26,44 +26,11 @@
   let totalPages = 0;
   let resultUrl = null;
   let resultFile = null;
-  let pdfLibPromise = null;
-
-  const PDF_LIB_SOURCES = [
-    'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
-    'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js'
-  ];
-
-  function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => {
-        script.remove();
-        reject(new Error(`No se pudo cargar ${src}`));
-      };
-      document.head.appendChild(script);
-    });
-  }
-
-  async function getPdfLib() {
-    if (window.PDFLib) return window.PDFLib;
-    if (pdfLibPromise) return pdfLibPromise;
-
-    pdfLibPromise = (async () => {
-      for (const src of PDF_LIB_SOURCES) {
-        try {
-          await loadScript(src);
-          if (window.PDFLib) return window.PDFLib;
-        } catch (_) {
-          // Prueba el siguiente origen.
-        }
-      }
-      throw new Error('No se ha podido cargar el motor PDF. Comprueba la conexión a Internet y vuelve a intentarlo.');
-    })();
-
-    return pdfLibPromise;
+  function getPdfLib() {
+    if (!window.PDFLib?.PDFDocument) {
+      throw new Error('El motor PDF local no está disponible. Publica esta versión mediante el flujo de GitHub Pages incluido en el proyecto.');
+    }
+    return window.PDFLib;
   }
 
   function formatBytes(bytes) {
@@ -162,7 +129,7 @@
     rangeSummary.textContent = 'Leyendo el documento…';
 
     try {
-      const PDFLib = await getPdfLib();
+      const PDFLib = getPdfLib();
       sourceBytes = new Uint8Array(await file.arrayBuffer());
       const doc = await PDFLib.PDFDocument.load(sourceBytes, { updateMetadata: false });
       totalPages = doc.getPageCount();
@@ -203,7 +170,7 @@
 
     try {
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      const PDFLib = await getPdfLib();
+      const PDFLib = getPdfLib();
       const sourceDoc = await PDFLib.PDFDocument.load(sourceBytes, { updateMetadata: false });
       const outputDoc = await PDFLib.PDFDocument.create();
 
