@@ -1,0 +1,101 @@
+name: Publicar Extractor PDF
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener proyecto
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Incorporar pdf-lib 1.17.1 al proyecto
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED='z8IYLHO8bTgFqj+yrPyIJnzBDf7DDhWwiEsk4sY+Oe6J2M+WQequeGS7qioI5vT6rXgVRb4K1UVQC5ER7MKzKQ=='
+
+          mkdir -p vendor
+
+          valid_vendor=false
+          if [ -s vendor/pdf-lib.min.js ]; then
+            ACTUAL="$(openssl dgst -sha512 -binary vendor/pdf-lib.min.js | base64 -w0)"
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              valid_vendor=true
+            fi
+          fi
+
+          if [ "$valid_vendor" != true ]; then
+            TMP_DIR="$(mktemp -d)"
+            cd "$TMP_DIR"
+            npm pack --ignore-scripts pdf-lib@1.17.1 >/dev/null
+            tar -xzf pdf-lib-1.17.1.tgz package/dist/pdf-lib.min.js package/LICENSE.md
+            cp package/dist/pdf-lib.min.js "$GITHUB_WORKSPACE/vendor/pdf-lib.min.js"
+            cp package/LICENSE.md "$GITHUB_WORKSPACE/vendor/pdf-lib-LICENSE.txt"
+            cd "$GITHUB_WORKSPACE"
+          fi
+
+          ACTUAL="$(openssl dgst -sha512 -binary vendor/pdf-lib.min.js | base64 -w0)"
+          test "$ACTUAL" = "$EXPECTED"
+          echo "pdf-lib 1.17.1 verificado correctamente."
+
+      - name: Conservar el motor PDF en el repositorio
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor/pdf-lib.min.js vendor/pdf-lib-LICENSE.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Incorporar pdf-lib 1.17.1 local [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Verificar privacidad de ejecución
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s vendor/pdf-lib.min.js
+          ! grep -REn \
+            'https?://|cdn\.jsdelivr|unpkg\.com|XMLHttpRequest|WebSocket|navigator\.sendBeacon' \
+            index.html app.js styles.css
+          grep -Fq "connect-src 'none'" index.html
+          grep -Fq 'script src="vendor/pdf-lib.min.js"' index.html
+          node --check app.js
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Empaquetar sitio
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4

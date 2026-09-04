@@ -28,7 +28,7 @@
   let resultFile = null;
   function getPdfLib() {
     if (!window.PDFLib?.PDFDocument) {
-      throw new Error('El motor PDF local no está disponible. Publica esta versión mediante el flujo de GitHub Pages incluido en el proyecto.');
+      throw new Error('Falta el motor PDF local (vendor/pdf-lib.min.js). En GitHub, ejecuta el flujo “Publicar Extractor PDF” una vez; después el motor quedará guardado en el propio repositorio.');
     }
     return window.PDFLib;
   }
